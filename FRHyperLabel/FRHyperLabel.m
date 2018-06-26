@@ -17,6 +17,17 @@
 @property (nonatomic) NSAttributedString *backupAttributedText;
 @property (nonatomic) CGRect boundingBox;
 
+/*
+ * Problem:- if we use this label inside a scrollView, touchesBegan will call with a significant delay.(kind of longPress)
+ *
+ * Solution:- so we have to handle the user interaction events through a delegate.
+ *
+ * Note:- if we use TapGesture, we can't get UIGestureRecognizerStateBegan.
+ * but we need that state for apperance change
+ * so we are using LongPressGesture.
+ */
+@property (nonatomic) UILongPressGestureRecognizer *longPressGestureRecognizer;
+
 @end
 
 @implementation FRHyperLabel
@@ -66,6 +77,12 @@ static UIColor *FRHyperLabelLinkColorHighlight;
 		self.linkAttributeHighlight = @{NSForegroundColorAttributeName: FRHyperLabelLinkColorHighlight,
 										NSUnderlineStyleAttributeName: @(NSUnderlineStyleSingle)};
 	}
+    
+    if (!self.longPressGestureRecognizer) {
+        self.longPressGestureRecognizer = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPressGestureRecognizer:)];
+        self.longPressGestureRecognizer.minimumPressDuration = 0.0;
+        [self addGestureRecognizer:self.longPressGestureRecognizer];
+    }
 }
 
 #pragma mark - APIs
@@ -112,6 +129,53 @@ static UIColor *FRHyperLabelLinkColorHighlight;
 	}
 }
 
+#pragma mark - Gesture Handler
+
+-(void)handleLongPressGestureRecognizer:(UIGestureRecognizer*)recognizer{
+    
+    CGPoint touchPoint = [recognizer locationInView:self];
+    NSValue *rangeValue = [self attributedTextRangeForPoint:touchPoint];
+    
+    switch (recognizer.state) {
+        case UIGestureRecognizerStateBegan:
+        {
+            self.backupAttributedText = self.attributedText;
+            if (rangeValue) {
+                NSRange range = [rangeValue rangeValue];
+                NSMutableAttributedString *attributedString = [[NSMutableAttributedString alloc]initWithAttributedString:self.attributedText];
+                [attributedString addAttributes:self.linkAttributeHighlight range:range];
+                
+                [UIView transitionWithView:self duration:highLightAnimationTime options:UIViewAnimationOptionTransitionCrossDissolve animations:^{
+                    self.attributedText = attributedString;
+                } completion:nil];
+            }
+        }
+            break;
+            
+        case UIGestureRecognizerStateEnded:
+        case UIGestureRecognizerStateCancelled:
+        {
+            [UIView transitionWithView:self duration:highLightAnimationTime options:UIViewAnimationOptionTransitionCrossDissolve animations:^{
+                self.attributedText = self.backupAttributedText;
+            } completion:nil];
+            
+            if (recognizer.state == UIGestureRecognizerStateEnded) {
+                if (rangeValue) {
+                    void(^handler)(FRHyperLabel *label, NSRange selectedRange) = self.handlerDictionary[rangeValue];
+                    handler(self, [rangeValue rangeValue]);
+                }
+            }
+            
+        }
+            break;
+            
+        default:
+            break;
+    }
+    
+}
+
+/*
 #pragma mark - Event Handler
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
@@ -155,6 +219,7 @@ static UIColor *FRHyperLabelLinkColorHighlight;
 	}
 	[super touchesEnded:touches withEvent:event];
 }
+*/
 
 #pragma mark - Substring Locator
 
