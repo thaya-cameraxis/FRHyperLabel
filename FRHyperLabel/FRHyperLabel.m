@@ -12,10 +12,7 @@
 @interface FRHyperLabel ()
 
 @property (nonatomic) NSMutableDictionary *handlerDictionary;
-@property (nonatomic) NSLayoutManager *layoutManager;
-@property (nonatomic) NSTextContainer *textContainer;
 @property (nonatomic) NSAttributedString *backupAttributedText;
-@property (nonatomic) CGRect boundingBox;
 
 /*
  * Problem:- if we use this label inside a scrollView, touchesBegan will call with a significant delay.(kind of longPress)
@@ -83,18 +80,6 @@ static UIColor *FRHyperLabelLinkColorHighlight;
         self.longPressGestureRecognizer.minimumPressDuration = 0.0;
         [self addGestureRecognizer:self.longPressGestureRecognizer];
     }
-}
-
-#pragma mark - override
-
-- (void)setAttributedText:(NSAttributedString *)attributedText {
-    _boundingBox = CGRectZero;
-    [super setAttributedText:attributedText];
-}
-
-- (void)setText:(NSString *)text {
-    _boundingBox = CGRectZero;
-    [super setText:text];
 }
 
 #pragma mark - APIs
@@ -266,50 +251,8 @@ static UIColor *FRHyperLabelLinkColorHighlight;
 												 inTextContainer:textContainer
 						fractionOfDistanceBetweenInsertionPoints:nil];
 	}
+    
 	return indexOfCharacter;
-/*
-	CGRect boundingBox = [self attributedTextBoundingBox];
-	
-	CGMutablePathRef path = CGPathCreateMutable();
-	CGPathAddRect(path, NULL, boundingBox);
-	
-	CTFramesetterRef framesetter = CTFramesetterCreateWithAttributedString((CFAttributedStringRef)self.attributedText);
-	CTFrameRef ctFrame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, self.attributedText.length), path, NULL);
-	
-	CGFloat verticalPadding = (CGRectGetHeight(self.frame) - CGRectGetHeight(boundingBox)) / 2;
-	CGFloat horizontalPadding = (CGRectGetWidth(self.frame) - CGRectGetWidth(boundingBox)) / 2;
-	CGFloat ctPointX = point.x - horizontalPadding;
-	CGFloat ctPointY = CGRectGetHeight(boundingBox) - (point.y - verticalPadding);
-	CGPoint ctPoint = CGPointMake(ctPointX, ctPointY);
-	
-	CFArrayRef lines = CTFrameGetLines(ctFrame);
-	
-	CGPoint* lineOrigins = malloc(sizeof(CGPoint)*CFArrayGetCount(lines));
-	CTFrameGetLineOrigins(ctFrame, CFRangeMake(0,0), lineOrigins);
-	
-	NSInteger indexOfCharacter = -1;
-	
-	for(CFIndex i = 0; i < CFArrayGetCount(lines); i++) {
-		CTLineRef line = CFArrayGetValueAtIndex(lines, i);
-		
-		CGFloat ascent, descent, leading;
-		CTLineGetTypographicBounds(line, &ascent, &descent, &leading);
-		
-		CGPoint origin = lineOrigins[i];
-		
-		if (ctPoint.y > origin.y - descent) {
-			indexOfCharacter = CTLineGetStringIndexForPosition(line, ctPoint);
-			break;
-		}
-	}
-	
-	free(lineOrigins);
-	CFRelease(ctFrame);
-	CFRelease(path);
-	CFRelease(framesetter);
-	
-	return indexOfCharacter;
-*/
 }
 
 - (NSValue *)attributedTextRangeForPoint:(CGPoint)point {
@@ -324,62 +267,6 @@ static UIColor *FRHyperLabelLinkColorHighlight;
 	}
 
 	return nil;
-}
-
-- (CGRect)attributedTextBoundingBox {
-	if (CGRectGetWidth(_boundingBox) != 0) {
-		return _boundingBox;
-	}
-	
-	NSLayoutManager *layoutManager = [NSLayoutManager new];
-	NSTextContainer *textContainer = [[NSTextContainer alloc] initWithSize:CGSizeZero];
-	
-	textContainer.lineFragmentPadding = 0.0;
-	textContainer.lineBreakMode = self.lineBreakMode;
-	textContainer.maximumNumberOfLines = self.numberOfLines;
-	textContainer.size = self.bounds.size;
-	[layoutManager addTextContainer:textContainer];
-	
-	NSTextStorage *textStorage = [[NSTextStorage alloc] initWithAttributedString:self.attributedText];
-	[textStorage addLayoutManager:layoutManager];
-	
-	CGRect textBoundingBox = [layoutManager usedRectForTextContainer:textContainer];
-	
-	
-	CGFloat H = 0;
-	
-	CTFramesetterRef framesetter = CTFramesetterCreateWithAttributedString( (CFMutableAttributedStringRef) self.attributedText);
-	CGRect box = CGRectMake(0,0, CGRectGetWidth(textBoundingBox), CGFLOAT_MAX);
-	CFIndex startIndex = 0;
-	CGMutablePathRef path = CGPathCreateMutable();
-	CGPathAddRect(path, NULL, box);
-	CTFrameRef frame = CTFramesetterCreateFrame(framesetter, CFRangeMake(startIndex, 0), path, NULL);
-	
-	CFArrayRef lineArray = CTFrameGetLines(frame);
-	CFIndex j = 0;
-	CFIndex lineCount = CFArrayGetCount(lineArray);
-	if (lineCount > self.numberOfLines && self.numberOfLines != 0) {
-		lineCount = self.numberOfLines;
-	}
-	
-	CGFloat h, ascent, descent, leading;
-	
-	for (j = 0; j < lineCount; j++) {
-		CTLineRef currentLine = (CTLineRef)CFArrayGetValueAtIndex(lineArray, j);
-		CTLineGetTypographicBounds(currentLine, &ascent, &descent, &leading);
-		h = ascent + descent + leading;
-		H += h;
-	}
-	
-	CFRelease(frame);
-	CFRelease(path);
-	CFRelease(framesetter);
-	
-	box.size.height = H;
-	
-	_boundingBox = box;
-	
-	return box;
 }
 
 
