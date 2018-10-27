@@ -383,4 +383,23 @@ static UIColor *FRHyperLabelLinkColorHighlight;
 }
 
 
+#pragma mark - HitTest
+
+-(UIView*)hitTest:(CGPoint)point withEvent:(UIEvent *)event{
+    UIView *hitView = [super hitTest:point withEvent:event];
+    
+    if (hitView == self) {
+        
+        NSValue *rangeValue = [self attributedTextRangeForPoint:point];
+        if (!rangeValue) {
+            //we have to avoid getting touch to pass the hit to parent view.
+            hitView = nil;
+        }
+        
+    }
+    
+    return hitView;
+    
+}
+
 @end
