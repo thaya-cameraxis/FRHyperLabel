@@ -224,6 +224,38 @@ static UIColor *FRHyperLabelLinkColorHighlight;
 #pragma mark - Substring Locator
 
 - (NSInteger) characterIndexForPoint:(CGPoint) point {
+
+	// use Text Kit API in iOS 7:
+	// Create instances of NSLayoutManager, NSTextContainer and NSTextStorage
+	NSLayoutManager *layoutManager = [[NSLayoutManager alloc] init];
+	NSTextContainer *textContainer = [[NSTextContainer alloc] initWithSize:CGSizeZero];
+	NSTextStorage *textStorage = [[NSTextStorage alloc] initWithAttributedString:self.attributedText];
+
+	// Configure layoutManager and textStorage
+	[layoutManager addTextContainer:textContainer];
+	[textStorage addLayoutManager:layoutManager];
+
+	// Configure textContainer
+	textContainer.lineFragmentPadding = 0.0;
+	textContainer.lineBreakMode = self.lineBreakMode;
+	textContainer.maximumNumberOfLines = self.numberOfLines;
+	textContainer.size = self.bounds.size;
+
+	CGSize labelSize = self.bounds.size;
+	CGRect textBoundingBox = [layoutManager usedRectForTextContainer:textContainer];
+	CGPoint textContainerOffset = CGPointMake((labelSize.width - textBoundingBox.size.width) * 0.5 - textBoundingBox.origin.x,
+											  (labelSize.height - textBoundingBox.size.height) * 0.5 - textBoundingBox.origin.y);
+	CGPoint locationOfTouch = CGPointMake(point.x - textContainerOffset.x,
+										  point.y - textContainerOffset.y);
+
+	NSInteger indexOfCharacter = NSNotFound;
+	if (CGRectContainsPoint(textBoundingBox, locationOfTouch)) {
+		indexOfCharacter = [layoutManager characterIndexForPoint:locationOfTouch
+												 inTextContainer:textContainer
+						fractionOfDistanceBetweenInsertionPoints:nil];
+	}
+	return indexOfCharacter;
+/*
 	CGRect boundingBox = [self attributedTextBoundingBox];
 	
 	CGMutablePathRef path = CGPathCreateMutable();
@@ -265,6 +297,7 @@ static UIColor *FRHyperLabelLinkColorHighlight;
 	CFRelease(framesetter);
 	
 	return indexOfCharacter;
+*/
 }
 
 - (NSValue *)attributedTextRangeForPoint:(CGPoint)point {
